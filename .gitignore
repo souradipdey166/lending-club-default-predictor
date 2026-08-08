@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Data files
+data/raw/*.csv
+data/raw/*.zip
+data/processed/*.csv
+
+# Models
+models/*.joblib
+models/*.pkl
+
+# Reports generated locally
+reports/figures/*.png
+reports/*.json
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/

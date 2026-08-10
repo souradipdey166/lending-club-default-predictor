@@ -1,5 +1,4 @@
 # Lending Club Loan Default Risk Prediction
-![alt text](image.png)
 
 ## Project Overview
 

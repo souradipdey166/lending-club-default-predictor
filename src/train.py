@@ -1,6 +1,3 @@
-import warnings
-warnings.filterwarnings("ignore")
-
 import json
 import joblib
 import pandas as pd
@@ -15,6 +12,7 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.metrics import roc_auc_score
 
 from config import PROCESSED_DATA_PATH, MODEL_PATH, METRICS_PATH, TARGET, TEST_SIZE, RANDOM_STATE
+from preprocessing import OutlierCapper
 
 
 def build_preprocessor(X):
@@ -61,6 +59,13 @@ def train_models():
         stratify=y
     )
 
+    # NOTE: OutlierCapper.fit() below only ever sees X_train (it is the
+    # first step of the Pipeline, and pipeline.fit(X_train, ...) only
+    # calls fit_transform on X_train). The 1st/99th percentile bounds
+    # it learns are then reused - unchanged - to transform X_test in
+    # pipeline.predict(X_test), and later to transform any new single
+    # row passed into prediction.py. Test data never influences the
+    # capping thresholds, so this is leak-free.
     preprocessor = build_preprocessor(X_train)
 
     models = {
@@ -86,6 +91,7 @@ def train_models():
 
         pipeline = Pipeline(
             steps=[
+                ("outlier_capper", OutlierCapper()),
                 ("preprocessor", preprocessor),
                 ("model", model)
             ]

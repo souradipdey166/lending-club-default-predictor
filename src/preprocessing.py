@@ -32,12 +32,17 @@ Why a custom Transformer instead of capping in data_preparation.py:
 
 Columns capped (continuous, low/balanced outlier rate):
     loan_amnt, int_rate, installment, annual_inc, dti, revol_bal,
-    open_acc, total_acc, credit_history_years
+    open_acc, total_acc, credit_history_years, loan_to_income,
+    installment_to_income
 
 Columns intentionally NOT capped (sparse / near-binary, IQR is not
 meaningful for them - flagging non-zero values as "outliers" would be
 wrong):
     term, delinq_2yrs, pub_rec, revol_util
+
+Columns intentionally NOT capped (naturally bounded, can't produce
+real outliers):
+    fico_score (bounded 300-850 by definition)
 """
 
 import numpy as np
@@ -55,6 +60,8 @@ DEFAULT_CAP_COLUMNS = [
     "open_acc",
     "total_acc",
     "credit_history_years",
+    "loan_to_income",
+    "installment_to_income",
 ]
 
 

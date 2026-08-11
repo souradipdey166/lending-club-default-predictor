@@ -1,4 +1,3 @@
-import json
 import joblib
 import pandas as pd
 
@@ -9,9 +8,18 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.metrics import roc_auc_score
+from xgboost import XGBClassifier
 
-from config import PROCESSED_DATA_PATH, MODEL_PATH, METRICS_PATH, TARGET, TEST_SIZE, RANDOM_STATE
+from config import (
+    PROCESSED_DATA_PATH,
+    MODELS_DIR,
+    MODEL_PATH_TEMPLATE,
+    MODEL_NAMES,
+    MODEL_DISPLAY_NAMES,
+    TARGET,
+    TEST_SIZE,
+    RANDOM_STATE,
+)
 from preprocessing import OutlierCapper
 
 
@@ -43,6 +51,38 @@ def build_preprocessor(X):
     return preprocessor
 
 
+def build_models() -> dict:
+    return {
+        "logistic_regression": LogisticRegression(
+            max_iter=1000,
+            class_weight={0: .2, 1: .9},
+            random_state=RANDOM_STATE,
+        ),
+        "random_forest": RandomForestClassifier(
+            n_estimators=150,
+            max_depth=5,
+            min_samples_split=20,
+            class_weight={0: .3, 1: .9},
+            n_jobs=-1,
+            random_state=RANDOM_STATE,
+        ),
+        "gradient_boosting": GradientBoostingClassifier(
+            random_state=RANDOM_STATE,
+        ),
+        "xgboost": XGBClassifier(
+            n_estimators=200,
+            max_depth=5,
+            learning_rate=0.05,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            scale_pos_weight=3,
+            eval_metric="logloss",
+            random_state=RANDOM_STATE,
+            n_jobs=-1,
+        ),
+    }
+
+
 def train_models():
     if not PROCESSED_DATA_PATH.exists():
         raise FileNotFoundError("Processed dataset not found. Run: python src/data_preparation.py")
@@ -52,6 +92,9 @@ def train_models():
     X = df.drop(columns=[TARGET])
     y = df[TARGET].astype(int)
 
+    # Same split (same TEST_SIZE / RANDOM_STATE) is reproduced in
+    # evaluate.py, so evaluate.py sees the exact same train/test rows
+    # without needing to persist them separately.
     X_train, X_test, y_train, y_test = train_test_split(
         X, y,
         test_size=TEST_SIZE,
@@ -59,35 +102,19 @@ def train_models():
         stratify=y
     )
 
-    # NOTE: OutlierCapper.fit() below only ever sees X_train (it is the
-    # first step of the Pipeline, and pipeline.fit(X_train, ...) only
-    # calls fit_transform on X_train). The 1st/99th percentile bounds
-    # it learns are then reused - unchanged - to transform X_test in
-    # pipeline.predict(X_test), and later to transform any new single
-    # row passed into prediction.py. Test data never influences the
-    # capping thresholds, so this is leak-free.
+    # NOTE: OutlierCapper.fit() only ever sees X_train (it's the first
+    # Pipeline step, and pipeline.fit(X_train, ...) only fits on
+    # X_train). Bounds learned here are reused unchanged on X_test and
+    # on any new row in prediction.py - leak-free.
     preprocessor = build_preprocessor(X_train)
+    models = build_models()
 
-    models = {
-        "logistic_regression": LogisticRegression(max_iter=1000, class_weight="balanced", random_state=RANDOM_STATE),
-        "random_forest": RandomForestClassifier(
-            n_estimators=150,
-            max_depth=12,
-            min_samples_split=20,
-            class_weight="balanced",
-            n_jobs=-1,
-            random_state=RANDOM_STATE
-        ),
-        "gradient_boosting": GradientBoostingClassifier(random_state=RANDOM_STATE)
-    }
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
-    results = {}
-    best_auc = -1
-    best_name = None
-    best_pipeline = None
-
-    for name, model in models.items():
-        print(f"Training: {name}")
+    for name in MODEL_NAMES:
+        model = models[name]
+        display_name = MODEL_DISPLAY_NAMES.get(name, name)
+        print(f"Training: {display_name}")
 
         pipeline = Pipeline(
             steps=[
@@ -98,35 +125,15 @@ def train_models():
         )
 
         pipeline.fit(X_train, y_train)
-        y_proba = pipeline.predict_proba(X_test)[:, 1]
-        auc = roc_auc_score(y_test, y_proba)
 
-        results[name] = {"roc_auc": float(auc)}
-        print(f"{name} ROC-AUC: {auc:.4f}")
+        out_path = MODEL_PATH_TEMPLATE.format(model_name=name)
+        joblib.dump(pipeline, out_path)
+        print(f"  Saved -> {out_path}")
 
-        if auc > best_auc:
-            best_auc = auc
-            best_name = name
-            best_pipeline = pipeline
-
-    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(best_pipeline, MODEL_PATH)
-
-    METRICS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(METRICS_PATH, "w", encoding="utf-8") as f:
-        json.dump(
-            {
-                "best_model": best_name,
-                "best_roc_auc": float(best_auc),
-                "all_model_results": results
-            },
-            f,
-            indent=4
-        )
-
-    print(f"Best model: {best_name}")
-    print(f"Model saved to: {MODEL_PATH}")
-    print(f"Metrics saved to: {METRICS_PATH}")
+    print("\nAll models trained and saved separately.")
+    print("Run 'python src/evaluate.py' next, then review reports/model_metrics.json")
+    print("and reports/figures/ to manually choose the best model.")
+    print("Set SELECTED_MODEL_NAME in config.py to whichever one you pick.")
 
 
 if __name__ == "__main__":

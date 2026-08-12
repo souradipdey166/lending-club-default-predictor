@@ -1,0 +1,382 @@
+{
+  "logistic_regression": {
+    "model_display_name": "Logistic Regression",
+    "train": {
+      "accuracy": 0.606026677866068,
+      "precision": 0.299321881691957,
+      "recall": 0.7260562167495939,
+      "f1_score": 0.4238914666539854,
+      "roc_auc": 0.7109324792989933,
+      "classification_report": {
+        "Good Loan (0)": {
+          "precision": 0.8939722572509458,
+          "recall": 0.5760894171239643,
+          "f1-score": 0.7006617009094946,
+          "support": 861401.0
+        },
+        "Bad Loan (1)": {
+          "precision": 0.299321881691957,
+          "recall": 0.7260562167495939,
+          "f1-score": 0.4238914666539854,
+          "support": 214847.0
+        },
+        "accuracy": 0.606026677866068,
+        "macro avg": {
+          "precision": 0.5966470694714514,
+          "recall": 0.6510728169367791,
+          "f1-score": 0.5622765837817401,
+          "support": 1076248.0
+        },
+        "weighted avg": {
+          "precision": 0.7752646273759336,
+          "recall": 0.606026677866068,
+          "f1-score": 0.6454111875342378,
+          "support": 1076248.0
+        }
+      },
+      "confusion_matrix": [
+        [
+          496244,
+          365157
+        ],
+        [
+          58856,
+          155991
+        ]
+      ],
+      "confusion_matrix_plot": "reports\\figures\\confusion_matrix_logistic_regression_train.png",
+      "roc_curve_plot": "reports\\figures\\roc_curve_logistic_regression_train.png"
+    },
+    "test": {
+      "accuracy": 0.605908675323903,
+      "precision": 0.2992811054250838,
+      "recall": 0.7262436699434018,
+      "f1_score": 0.4238825108258037,
+      "roc_auc": 0.7106324584076231,
+      "classification_report": {
+        "Good Loan (0)": {
+          "precision": 0.8940045990931569,
+          "recall": 0.5758950545623404,
+          "f1-score": 0.7005278572497762,
+          "support": 215350.0
+        },
+        "Bad Loan (1)": {
+          "precision": 0.2992811054250838,
+          "recall": 0.7262436699434018,
+          "f1-score": 0.4238825108258037,
+          "support": 53712.0
+        },
+        "accuracy": 0.605908675323903,
+        "macro avg": {
+          "precision": 0.5966428522591203,
+          "recall": 0.6510693622528712,
+          "f1-score": 0.56220518403779,
+          "support": 269062.0
+        },
+        "weighted avg": {
+          "precision": 0.7752818203585174,
+          "recall": 0.605908675323903,
+          "f1-score": 0.645302017677022,
+          "support": 269062.0
+        }
+      },
+      "confusion_matrix": [
+        [
+          124019,
+          91331
+        ],
+        [
+          14704,
+          39008
+        ]
+      ],
+      "confusion_matrix_plot": "reports\\figures\\confusion_matrix_logistic_regression_test.png",
+      "roc_curve_plot": "reports\\figures\\roc_curve_logistic_regression_test.png"
+    }
+  },
+  "random_forest": {
+    "model_display_name": "Random Forest",
+    "train": {
+      "accuracy": 0.7334731400197724,
+      "precision": 0.36319001618873176,
+      "recall": 0.4448374890038027,
+      "f1_score": 0.39988870129897297,
+      "roc_auc": 0.7027908981737463,
+      "classification_report": {
+        "Good Loan (0)": {
+          "precision": 0.8533086869790014,
+          "recall": 0.8054634252804443,
+          "f1-score": 0.8286960369733587,
+          "support": 861401.0
+        },
+        "Bad Loan (1)": {
+          "precision": 0.36319001618873176,
+          "recall": 0.4448374890038027,
+          "f1-score": 0.39988870129897297,
+          "support": 214847.0
+        },
+        "accuracy": 0.7334731400197724,
+        "macro avg": {
+          "precision": 0.6082493515838666,
+          "recall": 0.6251504571421236,
+          "f1-score": 0.6142923691361658,
+          "support": 1076248.0
+        },
+        "weighted avg": {
+          "precision": 0.7554682951146011,
+          "recall": 0.7334731400197724,
+          "f1-score": 0.7430949769503576,
+          "support": 1076248.0
+        }
+      },
+      "confusion_matrix": [
+        [
+          693827,
+          167574
+        ],
+        [
+          119275,
+          95572
+        ]
+      ],
+      "confusion_matrix_plot": "reports\\figures\\confusion_matrix_random_forest_train.png",
+      "roc_curve_plot": "reports\\figures\\roc_curve_random_forest_train.png"
+    },
+    "test": {
+      "accuracy": 0.7333700039396124,
+      "precision": 0.3625663231078856,
+      "recall": 0.44273160560023833,
+      "f1_score": 0.3986588432523051,
+      "roc_auc": 0.701840985250369,
+      "classification_report": {
+        "Good Loan (0)": {
+          "precision": 0.8528952101988461,
+          "recall": 0.8058602275365684,
+          "f1-score": 0.8287108666170038,
+          "support": 215350.0
+        },
+        "Bad Loan (1)": {
+          "precision": 0.3625663231078856,
+          "recall": 0.44273160560023833,
+          "f1-score": 0.3986588432523051,
+          "support": 53712.0
+        },
+        "accuracy": 0.7333700039396124,
+        "macro avg": {
+          "precision": 0.6077307666533658,
+          "recall": 0.6242959165684033,
+          "f1-score": 0.6136848549346544,
+          "support": 269062.0
+        },
+        "weighted avg": {
+          "precision": 0.7550123981204787,
+          "recall": 0.7333700039396124,
+          "f1-score": 0.742860935080909,
+          "support": 269062.0
+        }
+      },
+      "confusion_matrix": [
+        [
+          173542,
+          41808
+        ],
+        [
+          29932,
+          23780
+        ]
+      ],
+      "confusion_matrix_plot": "reports\\figures\\confusion_matrix_random_forest_test.png",
+      "roc_curve_plot": "reports\\figures\\roc_curve_random_forest_test.png"
+    }
+  },
+  "gradient_boosting": {
+    "model_display_name": "Gradient Boosting",
+    "train": {
+      "accuracy": 0.8034077647531053,
+      "precision": 0.5693706709726767,
+      "recall": 0.062365311128384386,
+      "f1_score": 0.11241714908968874,
+      "roc_auc": 0.714160668766553,
+      "classification_report": {
+        "Good Loan (0)": {
+          "precision": 0.8086395653144488,
+          "recall": 0.9882354443517015,
+          "f1-score": 0.8894622896417981,
+          "support": 861401.0
+        },
+        "Bad Loan (1)": {
+          "precision": 0.5693706709726767,
+          "recall": 0.062365311128384386,
+          "f1-score": 0.11241714908968874,
+          "support": 214847.0
+        },
+        "accuracy": 0.8034077647531053,
+        "macro avg": {
+          "precision": 0.6890051181435628,
+          "recall": 0.5253003777400429,
+          "f1-score": 0.5009397193657434,
+          "support": 1076248.0
+        },
+        "weighted avg": {
+          "precision": 0.7608752915200754,
+          "recall": 0.8034077647531053,
+          "f1-score": 0.7343439365185411,
+          "support": 1076248.0
+        }
+      },
+      "confusion_matrix": [
+        [
+          851267,
+          10134
+        ],
+        [
+          201448,
+          13399
+        ]
+      ],
+      "confusion_matrix_plot": "reports\\figures\\confusion_matrix_gradient_boosting_train.png",
+      "roc_curve_plot": "reports\\figures\\roc_curve_gradient_boosting_train.png"
+    },
+    "test": {
+      "accuracy": 0.8030528279727349,
+      "precision": 0.5627283800243605,
+      "recall": 0.06021000893655049,
+      "f1_score": 0.10878084057922266,
+      "roc_auc": 0.7128502130894564,
+      "classification_report": {
+        "Good Loan (0)": {
+          "precision": 0.8082980460664984,
+          "recall": 0.9883306245646621,
+          "f1-score": 0.8892941827791879,
+          "support": 215350.0
+        },
+        "Bad Loan (1)": {
+          "precision": 0.5627283800243605,
+          "recall": 0.06021000893655049,
+          "f1-score": 0.10878084057922266,
+          "support": 53712.0
+        },
+        "accuracy": 0.8030528279727349,
+        "macro avg": {
+          "precision": 0.6855132130454294,
+          "recall": 0.5242703167506063,
+          "f1-score": 0.4990375116792053,
+          "support": 269062.0
+        },
+        "weighted avg": {
+          "precision": 0.7592757467360268,
+          "recall": 0.8030528279727349,
+          "f1-score": 0.7334827614850455,
+          "support": 269062.0
+        }
+      },
+      "confusion_matrix": [
+        [
+          212837,
+          2513
+        ],
+        [
+          50478,
+          3234
+        ]
+      ],
+      "confusion_matrix_plot": "reports\\figures\\confusion_matrix_gradient_boosting_test.png",
+      "roc_curve_plot": "reports\\figures\\roc_curve_gradient_boosting_test.png"
+    }
+  },
+  "xgboost": {
+    "model_display_name": "XGBoost",
+    "train": {
+      "accuracy": 0.7209100504716385,
+      "precision": 0.36378000414124845,
+      "recall": 0.5315224322424795,
+      "f1_score": 0.43193724208623163,
+      "roc_auc": 0.7222296164931918,
+      "classification_report": {
+        "Good Loan (0)": {
+          "precision": 0.8679697717401713,
+          "recall": 0.7681463104872179,
+          "f1-score": 0.8150128038213156,
+          "support": 861401.0
+        },
+        "Bad Loan (1)": {
+          "precision": 0.36378000414124845,
+          "recall": 0.5315224322424795,
+          "f1-score": 0.43193724208623163,
+          "support": 214847.0
+        },
+        "accuracy": 0.7209100504716385,
+        "macro avg": {
+          "precision": 0.6158748879407099,
+          "recall": 0.6498343713648487,
+          "f1-score": 0.6234750229537735,
+          "support": 1076248.0
+        },
+        "weighted avg": {
+          "precision": 0.7673204241926491,
+          "recall": 0.7209100504716385,
+          "f1-score": 0.7385409913653598,
+          "support": 1076248.0
+        }
+      },
+      "confusion_matrix": [
+        [
+          661682,
+          199719
+        ],
+        [
+          100651,
+          114196
+        ]
+      ],
+      "confusion_matrix_plot": "reports\\figures\\confusion_matrix_xgboost_train.png",
+      "roc_curve_plot": "reports\\figures\\roc_curve_xgboost_train.png"
+    },
+    "test": {
+      "accuracy": 0.7196779924329708,
+      "precision": 0.3616682382323709,
+      "recall": 0.528429401251117,
+      "f1_score": 0.4294273394356608,
+      "roc_auc": 0.7186826117281488,
+      "classification_report": {
+        "Good Loan (0)": {
+          "precision": 0.8670979725475381,
+          "recall": 0.7673786858602275,
+          "f1-score": 0.8141963964585376,
+          "support": 215350.0
+        },
+        "Bad Loan (1)": {
+          "precision": 0.3616682382323709,
+          "recall": 0.528429401251117,
+          "f1-score": 0.4294273394356608,
+          "support": 53712.0
+        },
+        "accuracy": 0.7196779924329708,
+        "macro avg": {
+          "precision": 0.6143831053899544,
+          "recall": 0.6479040435556722,
+          "f1-score": 0.6218118679470992,
+          "support": 269062.0
+        },
+        "weighted avg": {
+          "precision": 0.7662006258782341,
+          "recall": 0.7196779924329708,
+          "f1-score": 0.7373861609335924,
+          "support": 269062.0
+        }
+      },
+      "confusion_matrix": [
+        [
+          165255,
+          50095
+        ],
+        [
+          25329,
+          28383
+        ]
+      ],
+      "confusion_matrix_plot": "reports\\figures\\confusion_matrix_xgboost_test.png",
+      "roc_curve_plot": "reports\\figures\\roc_curve_xgboost_test.png"
+    }
+  }
+}

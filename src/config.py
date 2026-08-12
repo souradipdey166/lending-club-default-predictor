@@ -14,7 +14,8 @@ TEST_SIZE = 0.2
 
 # Use a sample by default because the Kaggle file is very large.
 # Set SAMPLE_N = None if your machine has enough RAM.
-SAMPLE_N = 120000
+
+SAMPLE_N = None
 
 FEATURES = [
     "loan_amnt",

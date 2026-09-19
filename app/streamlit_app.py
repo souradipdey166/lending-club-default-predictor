@@ -13,13 +13,6 @@ st.set_page_config(
 SRC_DIR = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-# Temporary diagnostic
-try:
-    import joblib
-    st.success("JOBLIB IMPORT: SUCCESS")
-except Exception as e:
-    st.error(f"JOBLIB IMPORT FAILED: {repr(e)}")
-    raise
 
 from config import SELECTED_MODEL_NAME, SELECTED_MODEL_PATH  # noqa: E402
 from prediction import predict_default  # noqa: E402

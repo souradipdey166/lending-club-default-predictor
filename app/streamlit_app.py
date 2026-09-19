@@ -1,30 +1,29 @@
-"""
-streamlit_app.py
-
-Streamlit UI for the Lending Club default risk model. Sidebar collects
-raw applicant fields (or a demo example can be loaded), main area shows
-the prediction. Calls src/prediction.py's predict_default(), which
-handles engineered-feature construction (fico_score, loan_to_income,
-installment_to_income) internally.
-
-Run:
-    streamlit run app/streamlit_app.py
-"""
-
 import sys
 from pathlib import Path
 
 import streamlit as st
 
-# Allow importing from src/ regardless of where streamlit is launched from.
+st.set_page_config(
+    page_title="Lending Club Default Risk",
+    page_icon="\U0001F3E6",
+    layout="wide",
+)
+
+# Allow importing from src/ regardless of where Streamlit is launched from.
 SRC_DIR = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC_DIR))
+
+# Temporary diagnostic
+try:
+    import joblib
+    st.success("JOBLIB IMPORT: SUCCESS")
+except Exception as e:
+    st.error(f"JOBLIB IMPORT FAILED: {repr(e)}")
+    raise
 
 from config import SELECTED_MODEL_NAME, SELECTED_MODEL_PATH  # noqa: E402
 from prediction import predict_default  # noqa: E402
 
-
-st.set_page_config(page_title="Lending Club Default Risk", page_icon="\U0001F3E6", layout="wide")
 
 # ---------------------------------------------------------------------
 # Demo examples

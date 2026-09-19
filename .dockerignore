@@ -1,0 +1,7 @@
+myenv/
+__pycache__/
+*.pyc
+.git/
+.vscode/
+data/raw/
+*.ipynb_checkpoints/

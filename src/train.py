@@ -14,8 +14,8 @@ from config import (
     PROCESSED_DATA_PATH,
     MODELS_DIR,
     MODEL_PATH_TEMPLATE,
-    MODEL_NAMES,
     MODEL_DISPLAY_NAMES,
+    SELECTED_MODEL_NAME,
     TARGET,
     TEST_SIZE,
     RANDOM_STATE,
@@ -52,30 +52,59 @@ def build_preprocessor(X):
 
 
 def build_models() -> dict:
+    """
+    Hyperparameters below are the winning values found via
+    RandomizedSearchCV in notebooks/00_experiment.ipynb (scoring="f1",
+    StratifiedKFold cv). The search itself is NOT repeated here - it
+    was expensive (full 1.3M-row dataset) and only needs to run once;
+    this just bakes in the result so train.py stays fast and
+    reproducible.
+
+    gradient_boosting was intentionally left OUT of tuning (it has no
+    n_jobs / no class_weight support, and was by far the slowest model
+    to search over) - it's kept here only as an UNTUNED baseline for
+    comparison, not a candidate for SELECTED_MODEL_NAME.
+    """
     return {
         "logistic_regression": LogisticRegression(
-            max_iter=1000,
-            class_weight={0: .2, 1: .9},
+            # Best params (CV f1: 0.4265):
+            # {'LR__solver': 'liblinear', 'LR__penalty': 'l2', 'LR__C': 0.5}
+            solver="liblinear",
+            penalty="l2",
+            C=0.5,
+            class_weight="balanced",
+            max_iter=2000,
             random_state=RANDOM_STATE,
         ),
         "random_forest": RandomForestClassifier(
-            n_estimators=150,
-            max_depth=5,
-            min_samples_split=20,
-            class_weight={0: .3, 1: .9},
+            # Best params (CV f1: 0.4180):
+            # {'RF__n_estimators': 300, 'RF__min_samples_split': 5,
+            #  'RF__min_samples_leaf': 5, 'RF__max_features': 'log2',
+            #  'RF__max_depth': 6}
+            n_estimators=300,
+            min_samples_split=5,
+            min_samples_leaf=5,
+            max_features="log2",
+            max_depth=6,
+            class_weight="balanced",
             n_jobs=-1,
             random_state=RANDOM_STATE,
         ),
         "gradient_boosting": GradientBoostingClassifier(
+            # NOT tuned - untuned baseline only, see docstring above.
             random_state=RANDOM_STATE,
         ),
         "xgboost": XGBClassifier(
-            n_estimators=200,
+            # Best params (test F1: 0.4377, ROC-AUC: 0.7235):
+            # subsample=0.6, n_estimators=300, min_child_weight=2,
+            # max_depth=5, learning_rate=0.1, colsample_bytree=1.0
+            subsample=0.6,
+            n_estimators=300,
+            min_child_weight=2,
             max_depth=5,
-            learning_rate=0.05,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            scale_pos_weight=3,
+            learning_rate=0.1,
+            colsample_bytree=1.0,
+            scale_pos_weight=4.0094,
             eval_metric="logloss",
             random_state=RANDOM_STATE,
             n_jobs=-1,
@@ -111,29 +140,33 @@ def train_models():
 
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
-    for name in MODEL_NAMES:
-        model = models[name]
-        display_name = MODEL_DISPLAY_NAMES.get(name, name)
-        print(f"Training: {display_name}")
+    # Only trains SELECTED_MODEL_NAME (config.py) - the model already
+    # chosen from notebook experiments. The other candidates (LR, RF,
+    # GBM) don't need to be retrained here every time; if you want a
+    # fresh full comparison across all models again, change this back
+    # to `for name in MODEL_NAMES:` (and re-import MODEL_NAMES).
+    name = SELECTED_MODEL_NAME
+    model = models[name]
+    display_name = MODEL_DISPLAY_NAMES.get(name, name)
+    print(f"Training: {display_name}")
 
-        pipeline = Pipeline(
-            steps=[
-                ("outlier_capper", OutlierCapper()),
-                ("preprocessor", preprocessor),
-                ("model", model)
-            ]
-        )
+    pipeline = Pipeline(
+        steps=[
+            ("outlier_capper", OutlierCapper()),
+            ("preprocessor", preprocessor),
+            ("model", model)
+        ]
+    )
 
-        pipeline.fit(X_train, y_train)
+    pipeline.fit(X_train, y_train)
 
-        out_path = MODEL_PATH_TEMPLATE.format(model_name=name)
-        joblib.dump(pipeline, out_path)
-        print(f"  Saved -> {out_path}")
+    out_path = MODEL_PATH_TEMPLATE.format(model_name=name)
+    joblib.dump(pipeline, out_path)
+    print(f"  Saved -> {out_path}")
 
-    print("\nAll models trained and saved separately.")
-    print("Run 'python src/evaluate.py' next, then review reports/model_metrics.json")
-    print("and reports/figures/ to manually choose the best model.")
-    print("Set SELECTED_MODEL_NAME in config.py to whichever one you pick.")
+    print(f"\n{display_name} trained and saved.")
+    print("Run 'python src/evaluate.py' to review train/test metrics,")
+    print("confusion matrix, and ROC curve for this model.")
 
 
 if __name__ == "__main__":

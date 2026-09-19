@@ -1,115 +1,196 @@
+"""
+streamlit_app.py
+
+Streamlit UI for the Lending Club default risk model. Sidebar collects
+raw applicant fields (or a demo example can be loaded), main area shows
+the prediction. Calls src/prediction.py's predict_default(), which
+handles engineered-feature construction (fico_score, loan_to_income,
+installment_to_income) internally.
+
+Run:
+    streamlit run app/streamlit_app.py
+"""
+
 import sys
 from pathlib import Path
 
-import joblib
-import pandas as pd
 import streamlit as st
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.append(str(PROJECT_ROOT / "src"))
+# Allow importing from src/ regardless of where streamlit is launched from.
+SRC_DIR = Path(__file__).resolve().parents[1] / "src"
+sys.path.insert(0, str(SRC_DIR))
 
-from config import MODEL_PATH
+from config import SELECTED_MODEL_NAME, SELECTED_MODEL_PATH  # noqa: E402
+from prediction import predict_default  # noqa: E402
 
 
-st.set_page_config(
-    page_title="Lending Club Default Risk Predictor",
-    page_icon="🏦",
-    layout="centered"
-)
+st.set_page_config(page_title="Lending Club Default Risk", page_icon="\U0001F3E6", layout="wide")
 
-st.title("🏦 Lending Club Loan Default Risk Predictor")
-st.write(
-    "This app predicts the probability that a loan may become a bad loan / charged-off loan."
-)
-
-if not MODEL_PATH.exists():
-    st.error("Model file not found. Please run `python src/train.py` first.")
-    st.stop()
-
-model = joblib.load(MODEL_PATH)
-
-st.sidebar.header("Applicant & Loan Details")
-
-loan_amnt = st.sidebar.number_input("Loan Amount", min_value=500, max_value=40000, value=10000, step=500)
-term = st.sidebar.selectbox("Term", ["36 months", "60 months"])
-int_rate = st.sidebar.number_input("Interest Rate (%)", min_value=1.0, max_value=40.0, value=13.5, step=0.1)
-installment = st.sidebar.number_input("Installment", min_value=10.0, max_value=2000.0, value=339.31, step=10.0)
-
-grade = st.sidebar.selectbox("Grade", ["A", "B", "C", "D", "E", "F", "G"])
-sub_grade = st.sidebar.selectbox(
-    "Sub Grade",
-    [f"{g}{i}" for g in ["A", "B", "C", "D", "E", "F", "G"] for i in range(1, 6)]
-)
-
-emp_length = st.sidebar.slider("Employment Length (Years)", 0, 10, 3)
-home_ownership = st.sidebar.selectbox("Home Ownership", ["RENT", "MORTGAGE", "OWN", "OTHER"])
-annual_inc = st.sidebar.number_input("Annual Income", min_value=0, max_value=1000000, value=60000, step=1000)
-verification_status = st.sidebar.selectbox("Verification Status", ["Verified", "Source Verified", "Not Verified"])
-
-purpose = st.sidebar.selectbox(
-    "Purpose",
-    [
-        "debt_consolidation", "credit_card", "home_improvement", "major_purchase",
-        "small_business", "car", "medical", "moving", "vacation", "other"
-    ]
-)
-
-dti = st.sidebar.number_input("Debt-to-Income Ratio", min_value=0.0, max_value=100.0, value=18.5, step=0.5)
-delinq_2yrs = st.sidebar.number_input("Delinquencies in Last 2 Years", min_value=0, max_value=20, value=0)
-open_acc = st.sidebar.number_input("Open Accounts", min_value=0, max_value=100, value=10)
-pub_rec = st.sidebar.number_input("Public Records", min_value=0, max_value=20, value=0)
-revol_bal = st.sidebar.number_input("Revolving Balance", min_value=0, max_value=500000, value=8000, step=500)
-revol_util = st.sidebar.number_input("Revolving Utilization (%)", min_value=0.0, max_value=150.0, value=45.2, step=0.5)
-total_acc = st.sidebar.number_input("Total Accounts", min_value=0, max_value=200, value=25)
-application_type = st.sidebar.selectbox("Application Type", ["Individual", "Joint App"])
-credit_history_years = st.sidebar.number_input("Credit History Length (Years)", min_value=0.0, max_value=80.0, value=8.0, step=0.5)
-
-input_data = {
-    "loan_amnt": loan_amnt,
-    "term": term,
-    "int_rate": int_rate,
-    "installment": installment,
-    "grade": grade,
-    "sub_grade": sub_grade,
-    "emp_length": emp_length,
-    "home_ownership": home_ownership,
-    "annual_inc": annual_inc,
-    "verification_status": verification_status,
-    "purpose": purpose,
-    "dti": dti,
-    "delinq_2yrs": delinq_2yrs,
-    "open_acc": open_acc,
-    "pub_rec": pub_rec,
-    "revol_bal": revol_bal,
-    "revol_util": revol_util,
-    "total_acc": total_acc,
-    "application_type": application_type,
-    "credit_history_years": credit_history_years
+# ---------------------------------------------------------------------
+# Demo examples
+# ---------------------------------------------------------------------
+# Illustrative applicant profiles reflecting the kinds of patterns
+# typically associated with each outcome in the Lending Club dataset
+# (e.g. grade, interest rate, FICO band, DTI, utilization) - not
+# literal historical records, but representative of each class.
+DEMO_EXAMPLES = {
+    "-- Custom (fill in yourself) --": None,
+    "Example: Low risk (No Default)": {
+        "loan_amnt": 8000, "term": "36 months", "int_rate": 7.2, "installment": 248.11,
+        "grade": "A", "sub_grade": "A2", "emp_length": 9, "home_ownership": "MORTGAGE",
+        "annual_inc": 95000, "verification_status": "Verified", "purpose": "debt_consolidation",
+        "dti": 11.4, "delinq_2yrs": 0, "open_acc": 11, "pub_rec": 0, "revol_bal": 6200,
+        "revol_util": 22.5, "total_acc": 28, "application_type": "Individual",
+        "credit_history_years": 16.0, "fico_range_low": 780, "fico_range_high": 784,
+    },
+    "Example: High risk (Default)": {
+        "loan_amnt": 22000, "term": "60 months", "int_rate": 27.8, "installment": 683.45,
+        "grade": "G", "sub_grade": "G3", "emp_length": 1, "home_ownership": "RENT",
+        "annual_inc": 32000, "verification_status": "Not Verified", "purpose": "small_business",
+        "dti": 34.9, "delinq_2yrs": 2, "open_acc": 14, "pub_rec": 1, "revol_bal": 18500,
+        "revol_util": 88.3, "total_acc": 19, "application_type": "Individual",
+        "credit_history_years": 4.0, "fico_range_low": 660, "fico_range_high": 664,
+    },
+    "Example: Borderline (Moderate risk)": {
+        "loan_amnt": 15000, "term": "36 months", "int_rate": 16.9, "installment": 533.72,
+        "grade": "C", "sub_grade": "C4", "emp_length": 4, "home_ownership": "RENT",
+        "annual_inc": 52000, "verification_status": "Source Verified", "purpose": "credit_card",
+        "dti": 22.7, "delinq_2yrs": 0, "open_acc": 9, "pub_rec": 0, "revol_bal": 11000,
+        "revol_util": 58.0, "total_acc": 22, "application_type": "Individual",
+        "credit_history_years": 8.0, "fico_range_low": 695, "fico_range_high": 699,
+    },
 }
 
-if st.button("Predict Default Risk"):
-    input_df = pd.DataFrame([input_data])
-    probability = float(model.predict_proba(input_df)[:, 1][0])
-    prediction = int(model.predict(input_df)[0])
+FIELD_KEYS = [
+    "loan_amnt", "term", "int_rate", "installment", "grade", "sub_grade", "emp_length",
+    "home_ownership", "annual_inc", "verification_status", "purpose", "dti", "delinq_2yrs",
+    "open_acc", "pub_rec", "revol_bal", "revol_util", "total_acc", "application_type",
+    "credit_history_years", "fico_range_low", "fico_range_high",
+]
 
-    st.subheader("Prediction Result")
+DEFAULTS = {
+    "loan_amnt": 10000, "term": "36 months", "int_rate": 13.5, "installment": 339.31,
+    "grade": "B", "sub_grade": "B2", "emp_length": 3, "home_ownership": "RENT",
+    "annual_inc": 60000, "verification_status": "Verified", "purpose": "debt_consolidation",
+    "dti": 18.5, "delinq_2yrs": 0, "open_acc": 10, "pub_rec": 0, "revol_bal": 8000,
+    "revol_util": 45.2, "total_acc": 25, "application_type": "Individual",
+    "credit_history_years": 8.0, "fico_range_low": 690, "fico_range_high": 694,
+}
 
-    if probability < 0.30:
-        risk_level = "Low Risk"
-    elif probability < 0.60:
-        risk_level = "Medium Risk"
+for k, v in DEFAULTS.items():
+    st.session_state.setdefault(k, v)
+
+
+def load_demo(name: str):
+    example = DEMO_EXAMPLES.get(name)
+    if example:
+        for k, v in example.items():
+            st.session_state[k] = v
+
+
+# ---------------------------------------------------------------------
+# Sidebar - inputs
+# ---------------------------------------------------------------------
+with st.sidebar:
+    st.header("Applicant & Loan Details")
+
+    demo_choice = st.selectbox(
+        "Load a demo example",
+        list(DEMO_EXAMPLES.keys()),
+        key="demo_choice",
+        on_change=lambda: load_demo(st.session_state["demo_choice"]),
+    )
+    st.caption("Loads representative field values - edit anything below afterward.")
+    st.divider()
+
+    st.number_input("Loan Amount", min_value=500, max_value=100000, step=500, key="loan_amnt")
+    st.selectbox("Term", ["36 months", "60 months"], key="term")
+    st.number_input("Interest Rate (%)", min_value=3.0, max_value=35.0, step=0.1, key="int_rate")
+    st.number_input("Installment", min_value=10.0, step=1.0, key="installment")
+    st.selectbox("Grade", ["A", "B", "C", "D", "E", "F", "G"], key="grade")
+    st.selectbox("Sub Grade", [f"{st.session_state['grade']}{i}" for i in range(1, 6)], key="sub_grade")
+
+    st.divider()
+    st.number_input("Annual Income", min_value=0, step=1000, key="annual_inc")
+    st.number_input("Employment Length (years)", min_value=0, max_value=10, key="emp_length")
+    st.selectbox("Home Ownership", ["RENT", "OWN", "MORTGAGE", "OTHER"], key="home_ownership")
+    st.selectbox("Verification Status", ["Verified", "Source Verified", "Not Verified"], key="verification_status")
+    st.selectbox(
+        "Purpose",
+        ["debt_consolidation", "credit_card", "home_improvement", "major_purchase",
+         "small_business", "car", "medical", "moving", "vacation", "house",
+         "wedding", "renewable_energy", "educational", "other"],
+        key="purpose",
+    )
+    st.selectbox("Application Type", ["Individual", "Joint App"], key="application_type")
+
+    st.divider()
+    st.number_input("Debt-to-Income (DTI)", min_value=0.0, max_value=60.0, step=0.5, key="dti")
+    st.number_input("Delinquencies (2 yrs)", min_value=0, key="delinq_2yrs")
+    st.number_input("Open Credit Lines", min_value=0, key="open_acc")
+    st.number_input("Public Records", min_value=0, key="pub_rec")
+    st.number_input("Total Credit Lines", min_value=0, key="total_acc")
+    st.number_input("Revolving Balance", min_value=0, step=100, key="revol_bal")
+    st.number_input("Revolving Utilization (%)", min_value=0.0, max_value=150.0, step=0.5, key="revol_util")
+    st.number_input("Credit History Length (years)", min_value=0.0, step=0.5, key="credit_history_years")
+
+    st.divider()
+    st.caption("Origination-time FICO band")
+    st.number_input("FICO Range Low", min_value=300, max_value=850, key="fico_range_low")
+    st.number_input("FICO Range High", min_value=300, max_value=850, key="fico_range_high")
+
+# ---------------------------------------------------------------------
+# Main area
+# ---------------------------------------------------------------------
+st.title("\U0001F3E6 Lending Club Loan Default Risk Predictor")
+st.write("This app predicts the probability that a loan may become a bad loan / charged-off loan.")
+
+predict_clicked = st.button("Predict Default Risk", type="primary")
+
+if not SELECTED_MODEL_PATH.exists():
+    st.error(
+        f"No trained model found at `{SELECTED_MODEL_PATH}`.\n\n"
+        f"Run `python src/train.py` first to train and save the "
+        f"'{SELECTED_MODEL_NAME}' model, then reload this app."
+    )
+    st.stop()
+
+if predict_clicked:
+    input_data = {k: st.session_state[k] for k in FIELD_KEYS}
+
+    try:
+        result = predict_default(input_data)
+    except Exception as e:
+        st.error(f"Prediction failed: {e}")
+        st.stop()
+
+    prob = result["default_probability"]
+    is_bad = result["prediction"] == 1
+
+    if prob < 0.30:
+        risk_level, risk_color = "Low Risk", "green"
+    elif prob < 0.60:
+        risk_level, risk_color = "Medium Risk", "orange"
     else:
-        risk_level = "High Risk"
+        risk_level, risk_color = "High Risk", "red"
 
-    st.metric("Default Probability", f"{probability:.2%}")
-    st.metric("Risk Level", risk_level)
+    st.header("Prediction Result")
 
-    if prediction == 1:
-        st.error("Model Prediction: Bad Loan / Possible Default")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("Default Probability", f"{prob:.2%}")
+    with col2:
+        st.markdown(f"**Risk Level**")
+        st.markdown(f":{risk_color}[## {risk_level}]")
+
+    st.progress(min(max(prob, 0.0), 1.0))
+
+    if is_bad:
+        st.error(f"**Model Prediction: Bad Loan / Higher Default Risk**")
     else:
-        st.success("Model Prediction: Good Loan / Lower Default Risk")
-'''
-st.info(
-    "Educational project only. Real lending models require fairness testing, explainability, compliance checks, and out-of-time validation."
-)
-'''
+        st.success(f"**Model Prediction: Good Loan / Lower Default Risk**")
+
+    st.caption(
+        f"Model used: {result['model_used']}. This is a statistical estimate based on "
+        f"historical Lending Club data, not a guarantee or credit decision."
+    )

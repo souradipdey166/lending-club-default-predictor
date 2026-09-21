@@ -11,7 +11,7 @@ An end-to-end machine learning project that predicts whether a Lending Club loan
 - **1.3M+ loans** from the Kaggle Lending Club dataset (2007-2018), reduced to clear final outcomes (Fully Paid vs Charged Off).
 - **Leakage-aware feature selection:** only origination-time fields are used. Post-outcome columns such as `last_fico_range_*` are deliberately excluded.
 - **Leak-free preprocessing:** a custom `OutlierCapper` (1st/99th percentile winsorizing) is the first step of the sklearn `Pipeline`, so caps are learned from training data only and reused unchanged at inference.
-- **Four models compared** (Logistic Regression, Random Forest, Gradient Boosting, XGBoost) with `RandomizedSearchCV` and stratified 5-fold CV. XGBoost selected.
+- **Three models tuned and compared** (Logistic Regression, Random Forest, XGBoost) with `RandomizedSearchCV` and stratified 5-fold CV. XGBoost selected. Gradient Boosting is also available in the codebase as an untuned baseline, but was not part of the tuning comparison.
 - **Evaluated on the natural class distribution** (~80/20), not a rebalanced test set.
 - **Two ways to serve the model:** an interactive Streamlit app and a FastAPI `/predict` endpoint containerized with Docker.
 
@@ -76,9 +76,11 @@ All steps live in a single `Pipeline`, so training, evaluation, the API, and the
 Stratified 80/20 split (`random_state=42`). The test set keeps the natural class distribution.
 
 ### 4. Modeling and tuning
-Models were compared in `notebooks/00_experiment.ipynb` using `RandomizedSearchCV` with stratified 5-fold CV. Imbalance was handled with `class_weight="balanced"` (LR, RF) and `scale_pos_weight` (XGBoost) instead of discarding rows.
+Logistic Regression, Random Forest, and XGBoost were tuned and compared in `notebooks/00_experiment.ipynb` using `RandomizedSearchCV` with stratified 5-fold CV, scored on F1. Imbalance was handled with `class_weight="balanced"` (LR, RF) and `scale_pos_weight` (XGBoost) instead of discarding rows.
 
-`src/train.py` bakes in the winning hyperparameters, so retraining is fast and reproducible.
+Gradient Boosting exists in `src/train.py`'s model registry as an **untuned baseline only** (it has no `n_jobs` or `class_weight` support and was too slow to include in the tuning search) - it is not a candidate for the selected model.
+
+`src/train.py` bakes in the winning hyperparameters, so retraining is fast and reproducible. The final model is chosen manually (`SELECTED_MODEL_NAME` in `config.py`) after reviewing ROC-AUC, recall, precision, and the confusion matrix / ROC plots - it is not auto-picked by a single metric.
 
 ---
 
@@ -97,15 +99,15 @@ Evaluated on the held-out test set (53,712 bad loans / 215,350 good loans):
 Train ROC-AUC is 0.733 vs 0.724 on test, so overfitting is minimal.
 
 **How to read these numbers:**
-- The model **catches about 68% of loans that actually default**, at the cost of flagging many good loans (precision 0.32). This is a deliberate recall-first trade-off, since a missed default usually costs more than a rejected good loan.
+- The model **catches about 68% of loans that actually default**, at the cost of flagging many good loans (precision 0.32). This is a deliberate recall-first trade-off: missing a defaulter (false negative) costs the lender the loan principal, while flagging a good borrower (false positive) only costs potential interest or a manual review, so the model is tuned to accept more false positives in exchange for fewer missed defaults.
 - Precision is naturally low because only ~20% of loans default. Accuracy is not a useful headline metric here.
 - ROC-AUC around 0.72 is realistic for Lending Club using only origination-time features.
 
-Full metrics, per-class reports, and confusion matrices are in `reports/model_metrics.json` and `reports/figures/`.
+Full metrics, per-class reports, and confusion matrices are in `reports/model_metrics.json` and `reports/figures/`. Note that `model_metrics.json` currently holds results for XGBoost only; the Logistic Regression / Random Forest / Gradient Boosting confusion matrix images in `reports/figures/` are from an earlier run and are not reproduced in the current metrics file.
 
 ### Model comparison from the experiment notebook
 
-Tuned models on the held-out test set:
+Three models were tuned and compared on the held-out test set:
 
 | Model | ROC-AUC | Recall (bad) | F1 (bad) |
 |---|---|---|---|
@@ -113,7 +115,7 @@ Tuned models on the held-out test set:
 | Logistic Regression | 0.7106 | 0.674 | 0.428 |
 | Random Forest | 0.7015 | 0.707 | 0.418 |
 
-> These figures come from the experiment run that trained on a **50/50 undersampled training set** and tested on the untouched 80/20 test set. The production pipeline (`train.py`) trains on the full data with `scale_pos_weight`. Results are within about 0.002 ROC-AUC of each other, so undersampling gave no meaningful benefit and the full-data approach was kept.
+> These figures come from the experiment run that trained on a **50/50 undersampled training set** and tested on the untouched 80/20 test set. The production pipeline (`train.py`) trains on the full data with `scale_pos_weight` instead of undersampling. The two approaches land within about 0.002 ROC-AUC of each other, so undersampling gave no meaningful benefit and the full-data approach was kept.
 
 ---
 
@@ -264,10 +266,11 @@ A higher predicted probability means the borrower is more likely to be charged o
 ## Limitations and Future Work
 
 - **Hyperparameter tuning is limited.** The current search uses `RandomizedSearchCV` with a small number of iterations. A planned experiment will use Bayesian optimization (e.g., **Optuna**) to search the parameter space more efficiently, and its results will be compared against the current XGBoost configuration.
-- **Threshold is not tuned.** The default 0.5 cutoff is used. A cost-based threshold (weighing the cost of a missed default vs a rejected good loan) would improve real-world usefulness.
+- **Threshold is not tuned.** The default 0.5 cutoff is used. A cost-based threshold - derived from a cost matrix weighing the loss from a missed default (false negative) against the cost of a wrongly flagged good loan (false positive) - would minimize expected loss and improve real-world usefulness.
 - **No out-of-time validation.** The split is random, not chronological, so performance on future loan vintages is not measured.
-- **No probability calibration.** Class weighting shifts predicted probabilities upward, so the app's probabilities are best read as risk scores rather than true default rates.
+- **No probability calibration.** Class weighting shifts predicted probabilities upward to favor recall, so the model's output is better read as a relative risk score for ranking loans than as a literal, well-calibrated default probability.
 - **Not production-ready:** fairness/bias testing, monitoring, and drift detection are not implemented.
+
 This project is for educational purposes only and is not a credit decision tool.
 
 ---
